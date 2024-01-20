@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.Double?>
+<?import java.lang.String?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.effect.ColorAdjust?>
+<?import javafx.scene.effect.Glow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.paint.LinearGradient?>
+<?import javafx.scene.paint.Stop?>
+<?import javafx.scene.shape.Polygon?>
+<?import javafx.scene.text.Font?>
+
+<fx:root fx:id="root" focusTraversable="true" prefHeight="360.0" prefWidth="640.0" style="-fx-background-color: black;" styleClass="stackPane" type="StackPane" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <!-- <MediaControlVX></MediaControlVX> -->
+      <BorderPane fx:id="viewerPane" focusTraversable="true" prefHeight="360.0" prefWidth="640.0" styleClass="mediaPane">
+         <center>
+            <StackPane BorderPane.alignment="CENTER">
+               <children>
+                  <ImageView fx:id="background" fitHeight="360.0" fitWidth="640.0" pickOnBounds="true" preserveRatio="true" visible="false">
+                     <image>
+                        <Image url="@images/colors.jpg" />
+                     </image>
+                  </ImageView>
+                  <Label fx:id="vxlabel" scaleX="0.75" scaleY="0.75" style="-fx-background-color: BLACK;" text="VZPlayer" textFill="WHITE" translateY="110.0" visible="false">
+                     <font>
+                        <Font name="Consolas" size="36.0" />
+                     </font>
+                     <effect>
+                        <Glow level="1.0" />
+                     </effect>
+                     <padding>
+                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                     </padding>
+                  </Label>
+                  <ImageView fx:id="vzsplash" fitHeight="200.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@icon.png" />
+                     </image>
+                     <effect>
+                        <Glow level="1.0" />
+                     </effect>
+                  </ImageView>
+                  <StackPane fx:id="viewScreen" style="-fx-background-color: black;" visible="false">
+                     <children>
+                        <ImageView fx:id="viewer" fitHeight="360.0" fitWidth="640.0" pickOnBounds="true" preserveRatio="true" />
+                     </children>
+                  </StackPane>
+                  <StackPane fx:id="pauseScreen" prefHeight="150.0" prefWidth="200.0" styleClass="pausescreen" stylesheets="@vzvideoview.css">
+                     <children>
+                        <Polygon rotate="90.0" scaleX="0.75" scaleY="0.6" strokeLineJoin="BEVEL" strokeWidth="0.0">
+                          <points>
+                            <Double fx:value="-50.0" />
+                            <Double fx:value="40.0" />
+                            <Double fx:value="50.0" />
+                            <Double fx:value="40.0" />
+                            <Double fx:value="0.0" />
+                            <Double fx:value="-60.0" />
+                          </points>
+                           <stroke>
+                              <LinearGradient endX="1.0" endY="1.0">
+                                 <stops>
+                                    <Stop>
+                                       <color>
+                                          <Color red="0.1493055522441864" green="0.6298611164093018" blue="0.75" />
+                                       </color>
+                                    </Stop>
+                                    <Stop offset="0.05363984674329501">
+                                       <color>
+                                          <Color green="0.8166666626930237" blue="1.0" />
+                                       </color>
+                                    </Stop>
+                                    <Stop offset="1.0">
+                                       <color>
+                                          <Color red="0.1875" green="0.75" blue="0.1875" />
+                                       </color>
+                                    </Stop>
+                                 </stops>
+                              </LinearGradient>
+                           </stroke>
+                           <effect>
+                              <Glow level="1.0" />
+                           </effect>
+                           <fill>
+                              <LinearGradient endX="1.0" endY="1.0">
+                                 <stops>
+                                    <Stop>
+                                       <color>
+                                          <Color red="0.9120370149612427" green="0.9838734865188599" blue="1.0" />
+                                       </color>
+                                    </Stop>
+                                    <Stop offset="0.007662835249042145">
+                                       <color>
+                                          <Color red="0.9120370149612427" green="0.9838734865188599" blue="1.0" />
+                                       </color>
+                                    </Stop>
+                                    <Stop offset="1.0">
+                                       <color>
+                                          <Color red="1.0" green="1.0" blue="1.0" />
+                                       </color>
+                                    </Stop>
+                                 </stops>
+                              </LinearGradient>
+                           </fill>
+                        </Polygon>
+                     </children>
+                  </StackPane>
+               </children>
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+            </StackPane>
+         </center>
+      </BorderPane>
+      <BorderPane fx:id="statusPane" prefHeight="360.0" prefWidth="640.0" StackPane.alignment="CENTER">
+         <center>
+            <Button fx:id="status" alignment="CENTER" contentDisplay="TOP" mnemonicParsing="false" prefHeight="100.0" prefWidth="100.0" styleClass="timelabel" stylesheets="@vzvideoview.css" text="Button" textFill="WHITE" visible="false">
+               <graphic>
+                  <ImageView fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@star_on.png" />
+                     </image>
+                     <effect>
+                        <Glow level="1.0" />
+                     </effect>
+                  </ImageView>
+               </graphic>
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+            </Button>
+         </center>
+         <bottom>
+            <Label fx:id="statusLabel" alignment="TOP_LEFT" opacity="0.0" styleClass="timelabel" stylesheets="@vzvideoview.css" text="&gt; status" textFill="WHITE" translateX="10.0" translateY="-15.0" wrapText="true" BorderPane.alignment="TOP_LEFT">
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+               <font>
+                  <Font name="Consolas Bold" size="18.0" />
+               </font>
+            </Label>
+         </bottom>
+      </BorderPane>
+      <BorderPane fx:id="controlPane" prefWidth="640.0">
+         <bottom>
+            <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+               <children>
+                  <StackPane fx:id="timePane" alignment="BOTTOM_CENTER" minHeight="-Infinity">
+                     <children>
+                        <ProgressBar fx:id="timeBar" prefHeight="7.0" prefWidth="640.0" progress="1.0" styleClass="pbar" stylesheets="@vzvideoview.css">
+                           <effect>
+                              <ColorAdjust />
+                           </effect></ProgressBar>
+                        <Label fx:id="timeLabel" styleClass="timelabel" stylesheets="@vzvideoview.css" text="00:00:00 / 00:00:00" textFill="WHITE" translateY="-15.0">
+                           <padding>
+                              <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                           </padding>
+                        </Label>
+                        <Slider fx:id="timeSlider" minWidth="-Infinity" prefHeight="10.0" stylesheets="@vzvideoview.css" visible="false" />
+                     </children>
+                     <padding>
+                        <Insets bottom="10.0" left="10.0" right="10.0" />
+                     </padding>
+                  </StackPane>
+               </children>
+            </VBox>
+         </bottom>
+         <top>
+            <VBox fx:id="upPane" prefWidth="640.0" BorderPane.alignment="CENTER">
+               <children>
+                  <HBox fx:id="upBar" prefHeight="30.0" prefWidth="640.0" style="-fx-background-color: rgba(0,0,0,0.8);" stylesheets="@vzvideoview.css">
+                     <children>
+                        <Button fx:id="showMenu" maxWidth="30.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="30.0" style="-fx-background-color: transparent;">
+                           <graphic>
+                              <ImageView fx:id="showMenuImg" fitHeight="20.0" fitWidth="10.0" pickOnBounds="true" preserveRatio="true" translateY="1.0">
+                                 <image>
+                                    <Image url="@triangle.png" />
+                                 </image>
+                              </ImageView>
+                           </graphic>
+                        </Button>
+                        <Label fx:id="spLabel" alignment="CENTER" minWidth="-Infinity" prefHeight="30.0" prefWidth="20.0" text="🔴" textAlignment="CENTER" HBox.hgrow="NEVER" />
+                        <Label fx:id="skipLabel" minWidth="-Infinity" prefHeight="30.0" prefWidth="20.0" text="⏩" HBox.hgrow="NEVER">
+                           <font>
+                              <Font size="18.0" />
+                           </font>
+                        </Label>
+                        <VBox HBox.hgrow="ALWAYS">
+                           <children>
+                              <Label fx:id="titleLabel" prefHeight="30.0" prefWidth="540.0" stylesheets="@vzvideoview.css" text="Label" textFill="WHITE" translateY="1.0">
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                                 <font>
+                                    <Font name="System Bold" size="14.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                           <HBox.margin>
+                              <Insets />
+                           </HBox.margin>
+                        </VBox>
+                        <MenuButton fx:id="open" alignment="CENTER" contentDisplay="CENTER" minWidth="-Infinity" mnemonicParsing="false" prefHeight="30.0" prefWidth="75.0" stylesheets="@vzvideoview.css" text="+" textAlignment="CENTER" textFill="WHITE" visible="false" HBox.hgrow="NEVER">
+                          <items>
+                            <MenuItem fx:id="openFile" mnemonicParsing="false" text="Open file..." />
+                            <MenuItem fx:id="openFolder" mnemonicParsing="false" text="Open folder..." />
+                          </items>
+                           <font>
+                              <Font name="System Bold" size="14.0" />
+                           </font>
+                           <styleClass>
+                              <String fx:value="flatbutton" />
+                              <String fx:value="load" />
+                           </styleClass>
+                        </MenuButton>
+                        <Button fx:id="quit" minWidth="-Infinity" mnemonicParsing="false" prefHeight="30.0" prefWidth="50.0" stylesheets="@vzvideoview.css" text="X" textFill="WHITE" visible="false" HBox.hgrow="NEVER">
+                           <styleClass>
+                              <String fx:value="quit" />
+                              <String fx:value="flatbutton" />
+                           </styleClass>
+                        </Button>
+                     </children>
+                     <padding>
+                        <Insets bottom="-5.0" />
+                     </padding>
+                  </HBox>
+                  <HBox fx:id="upMenu" style="-fx-background-color: rgba(0,0,0,0.5);" visible="false">
+                     <children>
+                        <Button fx:id="special" mnemonicParsing="false" prefHeight="25.0" style="-fx-background-color: transparent;">
+                           <graphic>
+                              <ImageView fx:id="starImage" fitHeight="25.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+                                 <image>
+                                    <Image url="@star_off.png" />
+                                 </image>
+                              </ImageView>
+                           </graphic>
+                        </Button>
+                        <Button fx:id="skip" minWidth="-Infinity" mnemonicParsing="false" prefWidth="50.0" style="-fx-background-color: transparent;" text="Button">
+                           <graphic>
+                              <ImageView fx:id="skipImage" fitHeight="30.0" fitWidth="30.0" pickOnBounds="true" preserveRatio="true">
+                                 <image>
+                                    <Image url="@skip_off.png" />
+                                 </image>
+                              </ImageView>
+                           </graphic>
+                        </Button>
+                        <Button fx:id="shuffle" mnemonicParsing="false" prefHeight="30.0" styleClass="toolbar" stylesheets="@vzvideoview.css">
+                           <font>
+                              <Font size="18.0" />
+                           </font>
+                        </Button>
+                        <Button fx:id="repeat" mnemonicParsing="false" prefHeight="30.0" style="-fx-background-color: transparent;" styleClass="toolbar" stylesheets="@vzvideoview.css">
+                           <font>
+                              <Font size="18.0" />
+                           </font>
+                        </Button>
+                        <Button fx:id="volume" mnemonicParsing="false" styleClass="toolbar" stylesheets="@vzvideoview.css" HBox.hgrow="NEVER" />
+                        <HBox alignment="CENTER" prefHeight="30.0" prefWidth="100.0">
+                           <children>
+                              <StackPane>
+                                 <children>
+                                    <ProgressBar prefHeight="5.0" prefWidth="150.0" progress="1.0" stylesheets="@vzvideoview.css">
+                                       <styleClass>
+                                          <String fx:value="pbar" />
+                                          <String fx:value="audiobar" />
+                                       </styleClass>
+                                    </ProgressBar>
+                                    <Slider prefWidth="150.0" stylesheets="@vzvideoview.css" value="100.0" />
+                                 </children>
+                              </StackPane>
+                           </children>
+                        </HBox>
+                        <Button fx:id="audtrack" mnemonicParsing="false" styleClass="toolbar" stylesheets="@vzvideoview.css">
+                           <font>
+                              <Font name="System Bold" size="13.0" />
+                           </font>
+                        </Button>
+                        <Button fx:id="captions" mnemonicParsing="false" styleClass="toolbar" stylesheets="@vzvideoview.css" text="CC" />
+                        <Button fx:id="settings" alignment="CENTER_RIGHT" mnemonicParsing="false" nodeOrientation="LEFT_TO_RIGHT" prefHeight="30.0" styleClass="toolbar" stylesheets="@vzvideoview.css" text="🛠" textFill="#0095ff">
+                           <font>
+                              <Font name="System Bold" size="12.0" />
+                           </font>
+                        </Button>
+                     </children>
+                  </HBox>
+               </children>
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+            </VBox>
+         </top>
+         <left>
+            <HBox fx:id="listPane" alignment="CENTER" BorderPane.alignment="CENTER">
+               <children>
+                  <ListView fx:id="playListView" prefHeight="264.0" prefWidth="0.0" stylesheets="@vzvideoview.css" visible="false" HBox.hgrow="NEVER" />
+                  <Button fx:id="showPlaylist" ellipsisString="" mnemonicParsing="false" prefHeight="60.0" prefWidth="40.0" styleClass="barbutton" stylesheets="@vzvideoview.css" text="&lt;" HBox.hgrow="NEVER">
+                     <font>
+                        <Font size="16.0" />
+                     </font></Button>
+               </children>
+            </HBox>
+         </left>
+         <effect>
+            <ColorAdjust />
+         </effect>
+         <right>
+            <Button fx:id="nextButton" ellipsisString="" mnemonicParsing="false" prefHeight="60.0" prefWidth="40.0" styleClass="barbutton" stylesheets="@vzvideoview.css" text="⏭" BorderPane.alignment="CENTER">
+               <BorderPane.margin>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </BorderPane.margin>
+               <font>
+                  <Font size="16.0" />
+               </font></Button>
+         </right>
+      </BorderPane>
+   </children>
+</fx:root>
