@@ -2,7 +2,6 @@ package com.vzplayer;
 
 import java.io.File;
 import java.util.List;
-import java.util.Objects;
 
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
@@ -70,8 +69,7 @@ public class VZPlayer extends Application{
         stage.setResizable(true);
         // Platform.setImplicitExit(false);
 
-        stage.getIcons().add(new Image(
-                Objects.requireNonNull(VZPlayer.class.getResourceAsStream("icon.png"))));
+        stage.getIcons().add(new Image(FileManager.icon));
         
         // Muestra la aplicación
         stage.show();

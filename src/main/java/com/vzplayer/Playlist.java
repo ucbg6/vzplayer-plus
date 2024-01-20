@@ -20,6 +20,7 @@ public class Playlist {
         fm = filem;
         listSize.bind(fm.listSize);    
         mc.listIndex.bind(listIndex);
+        fm.listIndex.bind(listIndex);
         shuffle.bind(mc.isShuffle);
         initialize();
     }
@@ -29,7 +30,15 @@ public class Playlist {
     }
     
     public void play(){
-        mc.play();
+        if (fm.hasMedia()){
+            System.out.println("Shuffle: " + shuffle.get());
+            System.out.println("Size: " + listSize.get());
+            if (shuffle.get()){
+                listIndex.set((int) (Math.random() * fm.listSize.get()));
+                System.out.println("Index: " + listIndex.get());
+            }
+            mc.play();
+        }
     }
     
     public void shift(boolean isNext){

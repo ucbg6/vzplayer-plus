@@ -5,12 +5,15 @@
 package com.vzplayer;
 
 import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
+
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.layout.StackPane;
@@ -51,7 +54,7 @@ public class VZVideo extends StackPane{
     @FXML MenuButton open;
     @FXML MenuItem openFile, openFolder;
     @FXML VBox upPane;
-    @FXML ListView playListView;
+    @FXML ListView<String> playListView;
     
     
     EventHandler<KeyEvent> keyboard;
@@ -277,8 +280,9 @@ public class VZVideo extends StackPane{
         hideStatus.setDelay(Duration.seconds(3));
     }
     
-    private void setListView(){
-        playListView.setItems(fm.fileNames);
+    public void setListView(){
+        ObservableList<String> keys = FXCollections.observableArrayList(fm.getKeyList());
+        playListView.setItems(keys);
         
         playListView.setOnMouseClicked(me -> {
             mc.pl.listIndex.set(playListView.getSelectionModel().getSelectedIndex());

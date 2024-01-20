@@ -12,6 +12,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import com.google.gson.JsonObject;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -27,17 +29,14 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import org.json.simple.JSONObject;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import static uk.co.caprica.vlcj.javafx.videosurface.ImageViewVideoSurfaceFactory.videoSurfaceForImageView;
 import uk.co.caprica.vlcj.media.MediaRef;
-import uk.co.caprica.vlcj.medialist.MediaList;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.base.State;
 import uk.co.caprica.vlcj.player.base.TrackDescription;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
-import uk.co.caprica.vlcj.player.list.MediaListPlayer;
 
 public class MediaControl {
     // Caracteres especiales (botones)
@@ -48,33 +47,34 @@ public class MediaControl {
     final String SOUND0 = "\uD83D\uDD08";
     final String SOUND1 = "\uD83D\uDD09";
     final String SOUND2 = "\uD83D\uDD0A";
-    final String AUDIO = "A" + "\u25B6";
+    final String AUDIO = "A" + "▶";
     
     // Formatos válidos
-    final String VALID_FORMATS = ".mp4,.avi,.mp3,.mkv";
+
 
     FileManager fm;
     
     // Interfaz
     VZVideo video;
     Stage stage;
-    
+
+    public MediaPlayerFactory getFactory() {
+        return mediaPlayerFactory;
+    }
+
     // MediaPlayerFactory and Player
     private final MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
     private final EmbeddedMediaPlayer mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
-    MediaListPlayer listPlayer;
 
     // Ruta del fichero y título de la ventana
     StringProperty sourceName = new SimpleStringProperty("VZPlayer");
     
     // Lista de reproducción
-
-    MediaList mediaList;
     Playlist pl;
     
     // Guardar configuración (.json)
-    JSONObject settings;
-    
+    JsonObject settings;
+
     // Propiedades
     IntegerProperty listIndex = new SimpleIntegerProperty(0);           // Índice de lista
     LongProperty currentLength = new SimpleLongProperty(0);             // Duración actual
@@ -98,7 +98,7 @@ public class MediaControl {
     // Configuración modo automático
     final ScheduledExecutorService service = Executors.newScheduledThreadPool(5);
     Runnable myTask;
-    ScheduledFuture futureTask;
+    private ScheduledFuture<?> futureTask;
     long minTime = 250;
     long maxTime = 15000;
     long time = 3000;
@@ -115,7 +115,6 @@ public class MediaControl {
     public MediaControl(VZVideo video, FileManager fm){
         this.video = video;
         this.fm = fm;
-        this.fm.setMediaList(mediaPlayerFactory.media().newMediaList());
         video.setOnKeyPressed(keyControls);
         initialize();
     }
@@ -123,7 +122,7 @@ public class MediaControl {
     private void loadSettings(){
         settings = fm.loadSettingsFile();
         if (settings == null){
-            settings = new JSONObject();
+            settings = new JsonObject();
             saveSettings();
         } else {
             initProperties();
@@ -136,22 +135,29 @@ public class MediaControl {
     public void saveSettings(){
         if (settings == null){
             System.out.println("But there were no settings.");
+        } else {
+            settings.addProperty("is_shuffle",isShuffle.getValue());
+            settings.addProperty("is_special_mode",isSpecialMode.getValue());
+            settings.addProperty("is_skip_next",isSkipNext.getValue());
+            fm.saveSettingsFile(settings);
         }
-        settings.put("is_shuffle",isShuffle.get());
-        settings.put("is_special_mode",isSpecialMode.get());
-        settings.put("is_skip_next",isSkipNext.get());
-        fm.saveSettingsFile(settings);
+
+
+
     }
     
     private void initialize(){
         // SetImageView
-        mediaList = mediaPlayerFactory.media().newMediaList();
         mediaPlayer.videoSurface().set(videoSurfaceForImageView(video.getViewer()));
         
         setKeyboard();
 
         listIndex.addListener(cl -> {
-            play();
+            if (fm.hasMedia()){
+                // System.out.println("[" + listIndex.get() + "] " + fm.getFile());
+                play();
+            }
+
         });
         
         videoEvents();
@@ -232,8 +238,8 @@ public class MediaControl {
                 
                 
                 Platform.runLater(() -> {
-                    sourceName.set(fm.getFileName(listIndex.get()));
-                    setAudioMode(getFormat(new File(fm.getFileName(listIndex.get()))).equals(".mp3"));
+                    sourceName.set(fm.getFile());
+                    setAudioMode(getFormat(new File(fm.getFile())).equals(".mp3"));
                 });
 
                 
@@ -241,9 +247,12 @@ public class MediaControl {
 
             @Override
             public void mediaChanged(MediaPlayer mediaPlayer, MediaRef media) {
-                
-                
-                
+                // System.out.println("Changed! [" + media.newMedia().info().mrl() + "]");
+            }
+
+            @Override
+            public void buffering(MediaPlayer mediaPlayer, float newCache) {
+                // System.out.println("Buffering: " + newCache);
             }
 
             @Override
@@ -285,7 +294,7 @@ public class MediaControl {
             public void error(MediaPlayer mediaPlayer){
                 video.vzsplash.setImage(new Image(getClass().getResourceAsStream("errorsplash.png")));
                 System.out.println("Oops, an error just happened");
-                System.out.println(fm.mediaList.media().mrl(listIndex.get()));
+                // System.out.println(fm.mediaList.media().mrl(listIndex.get()));
                 mediaPlayer.submit(() -> {
                     pl.shift(true);
                     // fm.delete(listIndex.get());
@@ -350,9 +359,9 @@ public class MediaControl {
     }
 
     public void initProperties(){
-        isShuffle.set((boolean)settings.get("is_shuffle"));
-        isSpecialMode.set((boolean)settings.get("is_special_mode"));
-        isSkipNext.set((boolean)settings.get("is_skip_next"));
+        isShuffle.set(settings.get("is_shuffle").getAsBoolean());
+        isSpecialMode.set(settings.get("is_special_mode").getAsBoolean());
+        isSkipNext.set(settings.get("is_skip_next").getAsBoolean());
     }
     
     public void setAudioMode(boolean val){
@@ -399,6 +408,7 @@ public class MediaControl {
     
     public void setKeyboard(){
         keyControls = (KeyEvent t) -> {
+            System.out.println("Key pressed! -> " + t.getCode());
             switch (t.getCode()){
                 case RIGHT:{
                     // >> 5 sec.
@@ -486,7 +496,7 @@ public class MediaControl {
                 }
                 case D:{
                     if (t.isControlDown()){
-                        String filed = fm.getFileName(listIndex.get());
+                        String filed = fm.getFile();
                         stop();
                         fm.delete(listIndex.get());
                         status("Removed from list: " + filed + ". new list size = " + fm.getListSize());
@@ -757,10 +767,10 @@ public class MediaControl {
 
     public void getMedia(){
         // Reproductor de lista
-        listPlayer = mediaPlayerFactory.mediaPlayers().newMediaListPlayer();
+        // mediaPlayer = mediaPlayerFactory.mediaPlayers().newMediaListPlayer();
+        MediaPlayer mplayer = mediaPlayerFactory.mediaPlayers().newMediaPlayer();
         // Asignación de lista y reproductor
-        listPlayer.list().setMediaList(fm.getMediaListRef());
-        listPlayer.mediaPlayer().setMediaPlayer(mediaPlayer);
+        // listPlayer.list().setMediaList(fm.getMediaListRef());
 
         // Canal por defecto
         pl.play();
@@ -788,7 +798,7 @@ public class MediaControl {
         if (futureTask != null){
             futureTask.cancel(true);
             time = (long) (minTime + (maxTime * Math.random()));
-            System.out.println("new time: " + time);
+            // System.out.println("new time: " + time);
             futureTask = service.scheduleAtFixedRate(myTask,time,time,TimeUnit.MILLISECONDS);
         }
         
@@ -804,18 +814,10 @@ public class MediaControl {
         });
     }
     
-    public void play(){
-        if (fm.hasMedia()){
-            if (isShuffle.get()){
-                pl.listIndex.set((int)(fm.listSize.get() * Math.random()));
-            }
-            
-            listPlayer.controls().play(listIndex.get());
-            if (isSpecialMode.get()) randomStart();
-            setTimeBar(mediaPlayer.status().time());
-            
-        }
-        
+    public void play() {
+        mediaPlayer.media().play(fm.getRef());
+        if (isSpecialMode.get()) randomStart();
+        setTimeBar(mediaPlayer.status().time());
     }
     
     public void randomStart(){
@@ -826,13 +828,13 @@ public class MediaControl {
     public void playPause(boolean show){
         showPauseScreen = show;
         if (mediaPlayer.status().isPlaying()){
-            listPlayer.controls().pause();
+            mediaPlayer.controls().pause();
         } else {
             if (fm.hasMedia()){
                 if (isStopped()){
                     getMedia();
                 } else {
-                    listPlayer.controls().play();
+                    mediaPlayer.controls().play();
                 }
                 
             }

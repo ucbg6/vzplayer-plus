@@ -4,45 +4,42 @@
  */
 package com.vzplayer;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-import uk.co.caprica.vlcj.medialist.MediaList;
-import uk.co.caprica.vlcj.medialist.MediaListRef;
+import uk.co.caprica.vlcj.media.Media;
+import uk.co.caprica.vlcj.media.MediaRef;
 
 public class FileManager {
+    final String VALID_FORMATS = ".mp4,.avi,.mp3,.mkv";
+
+    // Static resources
+    static final InputStream icon = Objects.requireNonNull(
+            FileManager.class.getResourceAsStream("icon.png"));
+
     
     MediaControl mc;
-    MediaList mediaList;
-    MediaListRef listRef;
 
     Playlist pl;
-    ObservableList<String> fileNames = FXCollections.observableArrayList();
+
+    VZVideo video;
+
+    Map<String,MediaRef> filePaths = new LinkedHashMap<>();
+    ObservableMap<String, MediaRef> files = FXCollections.observableMap(filePaths);
     Stage stage;
 
+    IntegerProperty listIndex = new SimpleIntegerProperty();
     IntegerProperty listSize = new SimpleIntegerProperty(0);
     BooleanProperty listChanged = new SimpleBooleanProperty(false);
     BooleanProperty shuffle = new SimpleBooleanProperty(false);
@@ -56,11 +53,16 @@ public class FileManager {
     }
     
     public VZVideo makeVideo(){
-        return new VZVideo(this);
+        video = new VZVideo(this);
+        listSize.addListener(cl -> {
+            System.out.println("Size changed! Refreshing list view...");
+            refreshPlaylist();
+        });
+        return video;
         
     }
     
-    public JSONObject loadSettingsFile(){
+    public JsonObject loadSettingsFile(){
         File f = new File(SETTINGS_PATH);
         if (!checkFile(f)){
             try {
@@ -70,27 +72,27 @@ public class FileManager {
             }
         } else {
             try (FileReader reader = new FileReader(SETTINGS_PATH)){
-                JSONParser parser = new JSONParser();
-                Object obj = parser.parse(reader);
-                return (JSONObject) obj;
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                JsonElement jse = JsonParser.parseReader(reader);
+                return gson.fromJson(jse,JsonObject.class);
                 
-            } catch (IOException | ParseException e){}
+            } catch (IOException e){}
             
         }
         return null;
     }
     
-    public void saveSettingsFile(JSONObject settings){
+    public void saveSettingsFile(JsonObject settings){
         File f = new File(SETTINGS_PATH);
         if (!checkFile(f)) {
             try {
-                f.createNewFile();
+                boolean fileCreated = f.createNewFile();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         } else {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            String jsonString = settings.toJSONString();
+            String jsonString = settings.toString();
             JsonElement jse = JsonParser.parseString(jsonString);
             String json = gson.toJson(jse);
             try (FileWriter writer = new FileWriter(SETTINGS_PATH)){
@@ -105,25 +107,35 @@ public class FileManager {
     
     public void setMediaControl(MediaControl mc){
         this.mc = mc;
+
+    }
+
+    public void refreshPlaylist(){
+        video.setListView();
     }
     
     public void loadSources(){
-        JSONArray sources = (JSONArray) mc.settings.get("sources");
+        Gson gson = new Gson();
+        String[] sources = gson.fromJson(mc.settings.get("sources"),String[].class);
+
         if (sources == null){
-            mc.settings.put("sources", new JSONArray());
+            mc.settings.add("sources",new JsonArray());
             saveSettingsFile(mc.settings);
         } else {
-            Iterator<String> iterator = sources.iterator();
-            while (iterator.hasNext()) {
-                open(iterator.next());
+            for (String source : sources){
+                open(source);
             }
         }
     }
     
-    public void saveSource(String sourcePath){
-        if (saveSources){
+    public void saveSource(String sourcePath) {
+        ArrayList<String> sources = new ArrayList<>();
+        Gson gson = new Gson();
+        if (saveSources) {
             boolean exists = false;
-            JSONArray sources = (JSONArray) mc.settings.get("sources");
+            String[] sourceArray = gson.fromJson(mc.settings.get("sources"), String[].class);
+            sources.addAll(List.of(sourceArray));
+
             for (Object source : sources) {
                 if (source.equals(sourcePath)) {
                     exists = true;
@@ -135,30 +147,22 @@ public class FileManager {
                 saveSettingsFile(mc.settings);
             }
         } else {
-            mc.settings.put("sources",new JSONArray());
+            mc.settings.add("sources", gson.toJsonTree(sources,ArrayList.class));
             saveSettingsFile(mc.settings);
         }
-        
+
     }
     
     public void makePlaylist(){
         pl = new Playlist(mc,this);
     }
-    
-    public MediaListRef getMediaListRef(){
-        return listRef;
-    }
-    
-    public void setMediaList(MediaList ml){
-        mediaList = ml;
-    }
-    
-    public String getFileName(int index){
-        return fileNames.get(index);
+
+    public MediaRef getRef(){
+        return files.get(getFile());
     }
     
     public int getListSize(){
-        return fileNames.size();
+        return files.size();
     }
     
     public boolean hasMedia(){
@@ -174,37 +178,40 @@ public class FileManager {
         saveSource(sourcePath);
         source = new File(sourcePath);
         if (checkFile(source)){
+
             if (source.isDirectory()){
+                // La fuente es un directorio
                 File[] filesInSource = source.listFiles();
-                if (addAlltoMediaList(filesInSource) != 0){
-                    mediaList.media().add(source.getAbsolutePath());
-                    fileNames.add(source.getName());
+                if (filesInSource != null && addAlltoMediaList(filesInSource) != 0){
+                    Media media = mc.getFactory().media().newMedia(source.getAbsolutePath());
+                    files.put(source.getName(),media.newMediaRef());
                 }
             } else {
-                mediaList.media().add(source.getAbsolutePath());
-                fileNames.add(source.getName());
+                Media media = mc.getFactory().media().newMedia(source.getAbsolutePath());
+                files.put(source.getName(),media.newMediaRef());
             }
-            filter();
-            listSize.set(fileNames.size());
-            listRef = mediaList.media().newMediaListRef();
         }
+        filter();
+        listSize.set(files.size());
         // System.out.println(listSize + " files added to playlist");
-    
     }
     
     public void delete(int index){
-        fileNames.remove(index);
-        mediaList.media().remove(index);
-        System.out.println("media list size: " + mediaList.media().mrls().size());
-        listRef = mediaList.media().newMediaListRef();
-        
+        files.remove(getFileByIndex(index));
+    }
+
+    public String getFile(){
+        // System.out.println((String)files.keySet().toArray()[mc.listIndex.get()]);
+        return (String)files.keySet().toArray()[mc.listIndex.get()];
+    }
+
+    public String getFileByIndex(int index){
+        System.out.println((String)files.keySet().toArray()[index]);
+        return (String)files.keySet().toArray()[index];
     }
     
     public void deleteAll(){
-        fileNames.clear();
-        mediaList.media().clear();
-        listRef = mediaList.media().newMediaListRef();
-        
+        files.clear();
     }
     
     public void openFile(){
@@ -220,41 +227,52 @@ public class FileManager {
     }
 
     private int addAlltoMediaList(File[] source){
+        String log = "";
         for (File source1 : source) {
             if (source1.isDirectory()) {
                 File[] onSource = source1.listFiles();
-                addAlltoMediaList(onSource);
+                if (onSource != null){
+                    addAlltoMediaList(onSource);
+                }
             } else {
-                mediaList.media().add(source1.getAbsolutePath());
-                fileNames.add(source1.getName());
+                Media media = mc.getFactory().media().newMedia(source1.getAbsolutePath());
+                files.put(source1.getName(),media.newMediaRef());
+
             }
-            
+
         }
         return 0;
     }
+
+    public ArrayList<String> getKeyList(){
+        return new ArrayList<>(files.keySet());
+    }
     
     private void filter(){
-        ArrayList<Integer> toDelete = new ArrayList<>();
-        List<String> ml = mediaList.media().mrls();
+        ArrayList<String> keys = getKeyList();
         String format;
-        for (int i = 0; i < ml.size(); i++){
-            String path = ml.get(i);
+        String log = "";
+        for (String key : keys){
+            String path = files.get(key).newMedia().info().mrl();
             format = path.substring(path.length()-4);
-            // System.out.println("Formato: " + format);
-            
-            // mp4, avi y mkv, todo lo demás fuera
-            if (!mc.VALID_FORMATS.contains(format)){
-                toDelete.add((Integer)i);
-            } 
-        }
-        Collections.sort(toDelete);
-        Collections.reverse(toDelete);
 
-        for (Integer integer : toDelete) {
-            mediaList.media().remove(integer);
-            fileNames.remove(integer.intValue());
-
+            // mp4, avi y mkv, lo demás fuera
+            if (!VALID_FORMATS.contains(format)){
+                files.remove(key);
+            }
         }
+        /*
+        File f = new File("openlog.txt");
+        try (FileWriter writer = new FileWriter(f)){
+            if (!checkFile(f)){
+                boolean newFile = f.createNewFile();
+            }
+            writer.write(log);
+            writer.flush();
+
+
+        } catch (IOException ex){}
+         */
     }
     
     private static boolean checkFile(File f){
