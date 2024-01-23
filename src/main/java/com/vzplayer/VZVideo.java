@@ -16,16 +16,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.scene.control.*;
 import javafx.scene.layout.StackPane;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Cursor;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.Slider;
 import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -35,6 +29,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Polygon;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
 
@@ -54,7 +49,7 @@ public class VZVideo extends StackPane{
     @FXML MenuButton open;
     @FXML MenuItem openFile, openFolder;
     @FXML VBox upPane;
-    @FXML ListView<String> playListView;
+    @FXML ListView<VZMedia> playListView;
     
     
     EventHandler<KeyEvent> keyboard;
@@ -281,11 +276,11 @@ public class VZVideo extends StackPane{
     }
     
     public void setListView(){
-        ObservableList<String> keys = FXCollections.observableArrayList(fm.getKeyList());
-        playListView.setItems(keys);
+        ObservableList<VZMedia> items = FXCollections.observableArrayList(fm.getFiles());
+        playListView.setItems(items);
         
         playListView.setOnMouseClicked(me -> {
-            mc.pl.listIndex.set(playListView.getSelectionModel().getSelectedIndex());
+            mc.listIndex.set(playListView.getSelectionModel().getSelectedIndex());
             mc.play();
         });
     }
@@ -304,7 +299,7 @@ public class VZVideo extends StackPane{
         
         makeControl();
         videoEvents();
-        setListView();
+        // setListView();
         // rgbBar();
     }
     

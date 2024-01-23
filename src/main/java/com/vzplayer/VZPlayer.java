@@ -32,14 +32,24 @@ public class VZPlayer extends Application{
     public void start(Stage stage) throws Exception {
         // Carga el gestor de archivos
         fm = new FileManager(stage);
+        fm.loadSources();
+
+        /*
+            VZPlayer
+                FileManager
+                    VZVideo
+                        MediaControl
+                    Playlist
+
+
+         */
+
+
         
         // Carga el video
-        video = fm.makeVideo();
-        fm.makePlaylist();
-        video.initMedia();
-        
-        fm.loadSources();
-        
+        video = fm.getVideo();
+        // video.initMedia();
+
         scene = new Scene(video);
         
         video.setFocusTraversable(true);

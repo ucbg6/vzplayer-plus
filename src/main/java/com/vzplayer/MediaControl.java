@@ -53,6 +53,7 @@ public class MediaControl {
 
 
     FileManager fm;
+    VZMedia media;
     
     // Interfaz
     VZVideo video;
@@ -69,14 +70,11 @@ public class MediaControl {
     // Ruta del fichero y título de la ventana
     StringProperty sourceName = new SimpleStringProperty("VZPlayer");
     
-    // Lista de reproducción
-    Playlist pl;
-    
     // Guardar configuración (.json)
     JsonObject settings;
 
     // Propiedades
-    IntegerProperty listIndex = new SimpleIntegerProperty(0);           // Índice de lista
+    IntegerProperty listIndex = new SimpleIntegerProperty(-1);           // Índice de lista
     LongProperty currentLength = new SimpleLongProperty(0);             // Duración actual
     BooleanProperty isShuffle = new SimpleBooleanProperty(true);        // Modo aleatorio
     BooleanProperty isSpecialMode = new SimpleBooleanProperty(true);    // Modo especial
@@ -152,11 +150,18 @@ public class MediaControl {
         
         setKeyboard();
 
-        listIndex.addListener(cl -> {
-            if (fm.hasMedia()){
-                // System.out.println("[" + listIndex.get() + "] " + fm.getFile());
-                play();
+        listIndex.addListener((obv,old,nval) -> {
+            if (!fm.hasMedia()){
+                return;
             }
+            System.out.println("Index has changed! -> " + nval);
+            play();
+
+            Platform.runLater(() -> {
+                video.playListView.getSelectionModel().select(media);
+                video.playListView.getFocusModel().focus(nval.intValue());
+                // video.playListView.scrollTo(media);
+            });
 
         });
         
@@ -203,7 +208,7 @@ public class MediaControl {
         });
         
         video.nextButton.setOnMouseClicked(me -> {
-            pl.shift(true);
+            shift(true);
         });
 
         video.shuffle.setText(SHUFFLE);
@@ -219,9 +224,22 @@ public class MediaControl {
             }
         });
     }
-    
-    public void setPlaylist(Playlist playlist){
-        pl = playlist;
+
+    public void shift(boolean isNext){
+        if (isShuffle.get()){
+            nextShuffle();
+        } else {
+            if (isNext){
+                next();
+            } else {
+                prev();
+            }
+        }
+    }
+
+    public void nextShuffle(){
+        listIndex.set((int) (Math.random() * fm.listSize.get()));
+        play();
     }
     
     public void mediaPlayerEvents(){
@@ -238,8 +256,8 @@ public class MediaControl {
                 
                 
                 Platform.runLater(() -> {
-                    sourceName.set(fm.getFile());
-                    setAudioMode(getFormat(new File(fm.getFile())).equals(".mp3"));
+                    sourceName.set(media.getName());
+                    setAudioMode(media.getFormat().equals(".mp3"));
                 });
 
                 
@@ -296,7 +314,7 @@ public class MediaControl {
                 System.out.println("Oops, an error just happened");
                 // System.out.println(fm.mediaList.media().mrl(listIndex.get()));
                 mediaPlayer.submit(() -> {
-                    pl.shift(true);
+                    shift(true);
                     // fm.delete(listIndex.get());
                 });
             }
@@ -310,7 +328,7 @@ public class MediaControl {
             
             @Override
             public void finished(MediaPlayer mediaPlayer){
-                mediaPlayer.submit(() -> pl.shift(true));
+                mediaPlayer.submit(() -> shift(true));
             }
         });
     }
@@ -468,12 +486,12 @@ public class MediaControl {
                 }
                 case N:{
                     // Siguiente
-                    pl.shift(true);
+                    shift(true);
                     break;
                 }
                 case P:{
                     // Anterior
-                    pl.shift(false);
+                    shift(false);
                     break;
                 }
                 case SPACE:{
@@ -496,17 +514,15 @@ public class MediaControl {
                 }
                 case D:{
                     if (t.isControlDown()){
-                        String filed = fm.getFile();
-                        stop();
-                        fm.delete(listIndex.get());
-                        status("Removed from list: " + filed + ". new list size = " + fm.getListSize());
-                        if (fm.hasMedia()) {
-                            getMedia();
+                        String filed = media.getPath();
+                        if (fm.getListSize() > 1){
                             shift(true);
                         } else {
                             stop();
                             status("List empty. Stopped.");
                         }
+                        fm.delete(listIndex.get()-1);
+                        System.out.println("[" + listIndex.get() + "]" + "Removed from list: " + filed + ". new list size = " + fm.getListSize());
                     }
                     if (t.isAltDown()){
                         stop();
@@ -527,24 +543,6 @@ public class MediaControl {
                     }
                     break;
                 }
-                /*
-                case H: {
-                    if (!hidden){
-                        video.showVideo(false);
-                        if (isPlaying()){
-                            playPause(false);
-                        }
-                        video.pauseScreen.setVisible(false);
-                    } else {
-                        video.showVideo(false);
-                        if (!isPlaying()){
-                            playPause(false);
-                        }
-                    }
-                    hidden = !hidden;
-                    
-                    break;
-                } */
                 
                 case R: {
                     isShuffle.set(!isShuffle.get());
@@ -766,21 +764,25 @@ public class MediaControl {
     }
 
     public void getMedia(){
-        // Reproductor de lista
-        // mediaPlayer = mediaPlayerFactory.mediaPlayers().newMediaListPlayer();
-        MediaPlayer mplayer = mediaPlayerFactory.mediaPlayers().newMediaPlayer();
-        // Asignación de lista y reproductor
-        // listPlayer.list().setMediaList(fm.getMediaListRef());
+        if (!fm.hasMedia()){
+            return;
+        }
+
+        if (isShuffle.get()){
+            nextShuffle();
+        } else {
+            next();
+        }
 
         // Canal por defecto
-        pl.play();
+        // play();
         status("Done.");
 
         myTask = new Runnable() {
             @Override
             public void run() {
                 if (isSkipNext.get() && isPlaying()) {
-                    pl.shift(true);
+                    shift(true);
                     changeTimeInterval(); 
                 }
 
@@ -815,14 +817,21 @@ public class MediaControl {
     }
     
     public void play() {
-        mediaPlayer.media().play(fm.getRef());
-        if (isSpecialMode.get()) randomStart();
+        if (!fm.hasMedia()){
+            return;
+        }
+        // Reproduce el medio
+        media = fm.getMedia(listIndex.get());
+        mediaPlayer.media().play(media.getRef());
+        if (isSpecialMode.get()){
+            randomStart();
+        }
         setTimeBar(mediaPlayer.status().time());
     }
     
     public void randomStart(){
-        Random rand = new Random();
-        mediaPlayer.controls().setPosition(rand.nextFloat());
+        // Inicia la reproucción en una posición aleatoria entre 0 y 1
+        mediaPlayer.controls().setPosition((float)Math.random());
     }
     
     public void playPause(boolean show){
@@ -836,9 +845,9 @@ public class MediaControl {
                 } else {
                     mediaPlayer.controls().play();
                 }
-                
+
             }
-            
+
         }
         if (isSkipNext.get()){
             if (isPlaying()){
@@ -849,53 +858,29 @@ public class MediaControl {
                 video.skipLabel.setTextFill(Color.LIMEGREEN);
             }
         }
-        
+
     }
-    
-    public void shift(boolean val){
-        if (isShuffle.get()){
-            nextRandom();
-        } else {
-            if (val) {
-                next();
-            } else {
-                prev();
-            }
-        }
-        
-        
-    }
-    
+
     public void next(){
-        /*
-        if (listIndex.get() < listSize-1){
-            listIndex++;
+        int index = listIndex.get();
+        if (index < fm.listSize.get()-1){
+            index++;
         } else {
-            listIndex = 0;
+            index = 0;
         }
-        
-        play(listIndex);
-*/
+        listIndex.set(index);
+        play();
     }
-    
+
     public void prev(){
-        /*
-        if (listIndex > 0){
-            listIndex--;
+        int index = listIndex.get();
+        if (index > 0){
+            index--;
         } else {
-            listIndex = fm.getListSize()-1;
+            index = fm.listSize.get()-1;
         }
-        
-        play(listIndex);
-        */
-    }
-    
-    public void nextRandom(){
-        /* 
-        Random rand = new Random();
-        listIndex = (int)(rand.nextDouble() * fm.getListSize()-1);
-        listPlayer.controls().play(listIndex);
-        */
+        listIndex.set(index);
+        play();
     }
     
     public void setStage(Stage st){
