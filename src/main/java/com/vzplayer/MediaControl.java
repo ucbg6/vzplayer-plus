@@ -7,7 +7,6 @@ package com.vzplayer;
 import java.io.File;
 import java.util.List;
 import java.util.Objects;
-import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -32,10 +31,7 @@ import javafx.stage.Stage;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import static uk.co.caprica.vlcj.javafx.videosurface.ImageViewVideoSurfaceFactory.videoSurfaceForImageView;
 import uk.co.caprica.vlcj.media.MediaRef;
-import uk.co.caprica.vlcj.player.base.MediaPlayer;
-import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
-import uk.co.caprica.vlcj.player.base.State;
-import uk.co.caprica.vlcj.player.base.TrackDescription;
+import uk.co.caprica.vlcj.player.base.*;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
 
 public class MediaControl {
@@ -64,11 +60,12 @@ public class MediaControl {
     }
 
     // MediaPlayerFactory and Player
-    private final MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
-    private final EmbeddedMediaPlayer mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
+    private static final MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
+    private static final EmbeddedMediaPlayer mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
 
     // Ruta del fichero y título de la ventana
     StringProperty sourceName = new SimpleStringProperty("VZPlayer");
+    StringProperty timeValue = new SimpleStringProperty("00:00:00");
     
     // Guardar configuración (.json)
     JsonObject settings;
@@ -77,11 +74,13 @@ public class MediaControl {
     IntegerProperty listIndex = new SimpleIntegerProperty(-1);           // Índice de lista
     LongProperty currentLength = new SimpleLongProperty(0);             // Duración actual
     BooleanProperty isShuffle = new SimpleBooleanProperty(true);        // Modo aleatorio
-    BooleanProperty isSpecialMode = new SimpleBooleanProperty(true);    // Modo especial
-    BooleanProperty isSkipNext = new SimpleBooleanProperty(false);      // Modo automático
+    BooleanProperty isSpecialMode = new SimpleBooleanProperty();    // Modo especial
+    BooleanProperty isSkipNext = new SimpleBooleanProperty(true);      // Modo automático
     BooleanProperty isLoop = new SimpleBooleanProperty(false);          // Bucle
     BooleanProperty isRepeat = new SimpleBooleanProperty(false);        // Repetir lista al finalizar
     BooleanProperty isMute = new SimpleBooleanProperty(false);
+
+    BooleanProperty negativeTime = new SimpleBooleanProperty(false);
 
     // Gestor de canales y modo canal
     
@@ -97,22 +96,17 @@ public class MediaControl {
     final ScheduledExecutorService service = Executors.newScheduledThreadPool(5);
     Runnable myTask;
     private ScheduledFuture<?> futureTask;
-    long minTime = 250;
-    long maxTime = 15000;
+    long minTime = 1000;
+    long maxTime = 3000;
     long time = 3000;
     
     int subIndex = 0;
     
     // Barra de tiempo
-    String timeValue = "";
     
-    public MediaControl(){
-        initialize();
-    }
-    
-    public MediaControl(VZVideo video, FileManager fm){
-        this.video = video;
-        this.fm = fm;
+    public MediaControl(VZVideo vzvideo, FileManager filem){
+        video = vzvideo;
+        fm = filem;
         video.setOnKeyPressed(keyControls);
         initialize();
     }
@@ -154,12 +148,14 @@ public class MediaControl {
             if (!fm.hasMedia()){
                 return;
             }
-            System.out.println("Index has changed! -> " + nval);
+            // System.out.println("Index has changed! -> " + nval);
             play();
 
             Platform.runLater(() -> {
                 video.playListView.getSelectionModel().select(media);
                 video.playListView.getFocusModel().focus(nval.intValue());
+                // int newScroll = nval.intValue() - 5;
+                // video.playListView.scrollTo(Math.max(newScroll, 0));
                 // video.playListView.scrollTo(media);
             });
 
@@ -180,17 +176,17 @@ public class MediaControl {
         video.timeSlider.setOnMouseDragged(me -> {
             video.controlActive = true;
             mediaPlayer.controls().setPosition((float) video.timeSlider.getValue() / 100);
-            video.timeBar.setProgress((float) video.timeSlider.getValue() / 100);
-            timeValue = timeFormat((long) (mediaPlayer.status().length() * video.timeBar.getProgress() / 1000)) + " / " + timeFormat(mediaPlayer.status().length() / 1000);
-            video.timeLabel.setText(timeValue);
+            // video.timeBar.setProgress((float) video.timeSlider.getValue() / 100);
+            timeValue.set(timeFormat(getTime()));
+            video.timeLabel.setText(timeValue.get());
         });
 
         video.timeSlider.setOnMousePressed(me -> {
             video.controlActive = true;
             mediaPlayer.controls().setPosition((float) video.timeSlider.getValue() / 100);
-            video.timeBar.setProgress((float) video.timeSlider.getValue() / 100);
-            timeValue = timeFormat((long) (mediaPlayer.status().length() * video.timeBar.getProgress() / 1000)) + " / " + timeFormat(mediaPlayer.status().length() / 1000);
-            video.timeLabel.setText(timeValue);
+            // video.timeBar.setProgress((float) video.timeSlider.getValue() / 100);
+            timeValue.set(timeFormat(getTime()));
+            video.timeLabel.setText(timeValue.get());
         });
 
         video.timeSlider.setOnMouseReleased(me -> {
@@ -241,25 +237,27 @@ public class MediaControl {
         listIndex.set((int) (Math.random() * fm.listSize.get()));
         play();
     }
+
+    public long getTime(){
+        return mediaPlayer.status().time();
+    }
     
     public void mediaPlayerEvents(){
-        this.mediaPlayer.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
+        mediaPlayer.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
             @Override
             public void playing(MediaPlayer mediaPlayer) {
                 video.viewScreen.setEffect(null);
                 video.pauseScreen.setVisible(false);
                 video.showVideo(true);
                 if (isSkipNext.get()){
-                    video.skipImage.setImage(new Image(getClass().getResourceAsStream("skip_on.png")));
+                    // video.skipImage.setImage(new Image(getClass().getResourceAsStream("skip_on.png")));
                     video.skipLabel.setTextFill(Color.LIMEGREEN);
                 }
-                
-                
                 Platform.runLater(() -> {
                     sourceName.set(media.getName());
+                    currentLength.set(mediaPlayer.status().length());
                     setAudioMode(media.getFormat().equals(".mp3"));
                 });
-
                 
             }
 
@@ -270,7 +268,6 @@ public class MediaControl {
 
             @Override
             public void buffering(MediaPlayer mediaPlayer, float newCache) {
-                // System.out.println("Buffering: " + newCache);
             }
 
             @Override
@@ -288,10 +285,7 @@ public class MediaControl {
             
             @Override
             public void mediaPlayerReady(MediaPlayer mediaPlayer) {
-                
-                Platform.runLater(() -> {
-                    currentLength.set(mediaPlayer.status().length());
-                });
+
                 
             }
 
@@ -302,11 +296,13 @@ public class MediaControl {
                     video.showVideo(false);
                     sourceName.set("VZPlayer");
                     video.timeLabel.setText(timeFormat(0) + " / " + timeFormat(0));
-                    video.timeBar.setProgress(1);
+                    // video.timeBar.setProgress(1);
                     video.timeSlider.setValue(100);
-                    status("Stopped.");
+                    // status("Stopped.");
                 });
             }
+
+
             
             @Override
             public void error(MediaPlayer mediaPlayer){
@@ -321,10 +317,16 @@ public class MediaControl {
 
             @Override
             public void timeChanged(MediaPlayer mediaPlayer, long newTime) {
-                setTimeBar(newTime);
+                // System.out.println("Current length: " + currentLength.get());
+                // System.out.println("Time: " + getTime());
+                // setTimeBar(newTime);
                 
             }
-            
+
+            @Override
+            public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
+                setTimeBar(newPosition);
+            }
             
             @Override
             public void finished(MediaPlayer mediaPlayer){
@@ -349,11 +351,11 @@ public class MediaControl {
             saveSettings();
             if (nval) {
                 video.spLabel.setTextFill(Color.CYAN);
-                video.starImage.setImage(new Image(getClass().getResourceAsStream("star_on.png")));
+                // video.starImage.setImage(new Image(getClass().getResourceAsStream("star_on.png")));
                 status("Special mode ON");
             } else {
                 video.spLabel.setTextFill(Color.DARKGREY);
-                video.starImage.setImage(new Image(MediaControl.class.getResourceAsStream("star_off.png")));
+                // video.starImage.setImage(new Image(MediaControl.class.getResourceAsStream("star_off.png")));
                 status("Special mode OFF");
             }
         });
@@ -413,7 +415,7 @@ public class MediaControl {
     public String timeFormat(long t){
         t /= 1000;
         String f = "%02d:%02d:%02d";
-        String st = "";
+        String st;
         int h, m, s;
         s = (int) t % 60;
         m = (int) (t / 60) % 60;
@@ -426,7 +428,7 @@ public class MediaControl {
     
     public void setKeyboard(){
         keyControls = (KeyEvent t) -> {
-            System.out.println("Key pressed! -> " + t.getCode());
+            // System.out.println("Key pressed! -> " + t.getCode());
             switch (t.getCode()){
                 case RIGHT:{
                     // >> 5 sec.
@@ -783,7 +785,7 @@ public class MediaControl {
             public void run() {
                 if (isSkipNext.get() && isPlaying()) {
                     shift(true);
-                    changeTimeInterval(); 
+                    changeTimeInterval();
                 }
 
             }
@@ -806,14 +808,24 @@ public class MediaControl {
         
     }
     
-    public void setTimeBar(long newTime){
-        video.timeBar.setProgress(mediaPlayer.status().position());
-        video.timeSlider.setValue(video.timeBar.getProgress() * 100);
-        timeValue = timeFormat(mediaPlayer.status().time()) + " / " + timeFormat(mediaPlayer.status().length());
+    public void setTimeBar(float newPos){
+        // video.timeBar.setProgress(getPosition());
+        video.timeSlider.setValue(newPos * 100);
+        // System.out.println("New position: " + newPos);
+        // System.out.println("Slider: " + video.timeSlider.getValue());
+        timeValue.set(timeFormat(getTime()));
+        // System.out.println("Time: " + timeValue);
+
+
         
         Platform.runLater(() -> {
-            video.timeLabel.setText(timeValue);
+            video.timeLabel.setText(timeValue.get());
+            video.durationLabel.setText(timeFormat(currentLength.get()));
         });
+    }
+
+    public float getPosition(){
+        return mediaPlayer.status().position();
     }
     
     public void play() {
@@ -826,7 +838,7 @@ public class MediaControl {
         if (isSpecialMode.get()){
             randomStart();
         }
-        setTimeBar(mediaPlayer.status().time());
+        setTimeBar(getPosition());
     }
     
     public void randomStart(){

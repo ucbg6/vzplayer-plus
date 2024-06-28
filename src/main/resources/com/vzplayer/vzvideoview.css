@@ -1,4 +1,4 @@
-
+/*
 .pbar > .bar {
     -fx-background-radius:4;
     -fx-background-insets: 0,1;
@@ -6,6 +6,7 @@
     /* linear-gradient(to right, rgba(0, 72, 255, 1), rgba(50, 205, 50, 1)); */
     
 }
+*/
 
 .audiobar > .bar {
     -fx-background-color: linear-gradient(to right, #8026e0, #2642e0);
@@ -28,31 +29,72 @@
     linear-gradient(to right, rgba(0, 72, 255, 1), rgba(50, 205, 50, 1));
 */
 
-.pbar > .track {
-   -fx-background-color: black;
-   -fx-background-radius: 0;
-   -fx-background-insets: 0,1;
+.title-bar {
+    -fx-background-color: linear-gradient(to bottom, rgba(0, 0, 0, 1), rgba(0,0,0,0));
 }
 
- .slider .thumb {
+
+/* Styling the slider track */
+.time-slider > .track {
+     -fx-background-color: #333;
+     -fx-pref-height:5px;
+
+}
+
+/* Styling the slider thumb */
+.time-slider > .thumb {
     -fx-background-color: white;
-    -fx-border:none;
-    -fx-pref-height:15px;
-    -fx-pref-width:15px;
 }
 
-.slider .track {
-    -fx-background-color: transparent;
-    -fx-pref-height: 15px;
+/* Styling the filled track */
+.time-slider > .colored-track {
+     /* -fx-background-color: linear-gradient(to right, rgba(0, 72, 255, 1), rgba(50, 205, 50, 1));*/
+     -fx-background-color: linear-gradient(to right, rgba(2, 47, 250, 1), rgba(3, 165, 252, 1));
+     -fx-height:10px;
+}
+
+/* Styling the animated thumb */
+.time-slider > .animated-thumb {
+     -fx-background-color: rgba(0,0,0,0.5);
+}
+
+/* Styling the slider value text inside animated thumb */
+.time-slider .slider-value {
+     -fx-fill: white;
+     -fx-stroke: white;
+}
+
+.progress-indicator .percentage {
+    -fx-fill:null;
+}
+
+.progress-indicator  {
+    -fx-padding: 0 0 -16 0;
+    -fx-progress-color: green;
 }
 
 .flatbutton {
     -fx-background-radius: 0px;
 }
 
-.timelabel{
+.menu-bar {
+    -fx-background-color:rgba(0,0,0,0.8);
+    -fx-color: white;
+}
+
+.menu-item .label{
+    -fx-text-fill: white;
+    -fx-margin: -20px;
+}
+
+.time-pane {
     -fx-background-color: rgba(0,0,0,0.8);
+    -fx-padding:10px;
+}
+
+.statuslabel{
     -fx-background-radius: 5px;
+    -fx-background-color: rgba(0,0,0,0.8);
 }
 
 .quit {

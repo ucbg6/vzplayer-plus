@@ -1,22 +1,27 @@
 package com.vzplayer;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import uk.co.caprica.vlcj.media.MediaRef;
 
-import java.io.File;
-
-public class VZMedia {
-
-    private FileManager fm;
-    private MediaControl mc;
-
+public class VZMedia{
     private final String name;
     private final String path;
-    private final MediaRef ref;
+    private transient final MediaRef ref;
+    private long start = 0;
 
-    public VZMedia(FileManager fm, String fileName, String filePath){
-        name = fileName;
+    public VZMedia(String filePath, MediaRef mediaRef){
         path = filePath;
-        ref = fm.getFactory().media().newMediaRef(filePath);
+        name = path.substring(path.lastIndexOf("\\") + 1);
+        ref = mediaRef;
+    }
+
+    public void setStart(long startAt){
+        start = startAt;
+    }
+
+    public long getStart() {
+        return start;
     }
 
     public String getName(){
@@ -32,6 +37,7 @@ public class VZMedia {
     }
 
     public String getFormat(){
+        String path = getPath();
         return path.substring(path.length()-4);
     }
 
@@ -39,4 +45,15 @@ public class VZMedia {
     public String toString() {
         return name;
     }
+
+    public String toJson(){
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(this);
+    }
+
+    public String tooltip(){
+        return name + "\nPath: " + path;
+    }
+
+
 }

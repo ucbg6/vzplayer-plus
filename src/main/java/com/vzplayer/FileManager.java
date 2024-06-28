@@ -13,15 +13,10 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
-import uk.co.caprica.vlcj.media.Media;
-import uk.co.caprica.vlcj.media.MediaRef;
 
 public class FileManager {
     final String VALID_FORMATS = ".mp4,.avi,.mp3,.mkv";
@@ -67,6 +62,10 @@ public class FileManager {
     public VZVideo getVideo(){
         return video;
     }
+
+    public MediaControl getControl(){
+        return mc;
+    }
     
     public JsonObject loadSettingsFile(){
         File f = new File(SETTINGS_PATH);
@@ -98,12 +97,12 @@ public class FileManager {
             String jsonString = settings.toString();
             JsonElement jse = JsonParser.parseString(jsonString);
             String json = gson.toJson(jse);
-            writeToFile(json,SETTINGS_PATH);
+            writeToFile(json);
         }
     }
     
-    public void setMediaControl(MediaControl mc){
-        this.mc = mc;
+    public void setMediaControl(MediaControl mediac){
+        mc = mediac;
 
     }
 
@@ -176,10 +175,12 @@ public class FileManager {
                 // La fuente es un directorio
                 File[] filesInSource = source.listFiles();
                 if (filesInSource != null && addAlltoMediaList(filesInSource) != 0){
-                    files.add(new VZMedia(this,source.getName(),source.getAbsolutePath()));
+                    files.add(new VZMedia(source.getAbsolutePath(),
+                            getFactory().media().newMediaRef(source.getAbsolutePath())));
                 }
             } else {
-                files.add(new VZMedia(this,source.getName(),source.getAbsolutePath()));
+                files.add(new VZMedia(source.getAbsolutePath(),
+                        getFactory().media().newMediaRef(source.getAbsolutePath())));
             }
         }
         // filter();
@@ -219,6 +220,15 @@ public class FileManager {
         open(selectedFolder.getAbsolutePath());
     }
 
+    // Importa un fichero JSON con los medios
+    public void importJson(String path){
+
+    }
+
+    public void exportJson(String path){
+
+    }
+
     private int addAlltoMediaList(File[] source){
         // Toma los ficheros de un directorio
         String log = "";
@@ -229,9 +239,10 @@ public class FileManager {
                     addAlltoMediaList(onSource);
                 }
             } else {
-                VZMedia media = new VZMedia(this,source1.getName(),source1.getAbsolutePath());
+                VZMedia media = new VZMedia(source1.getAbsolutePath(),
+                        getFactory().media().newMediaRef(source1.getAbsolutePath()));
                 if (VALID_FORMATS.contains(media.getFormat())){
-                    files.add(new VZMedia(this,source1.getName(),source1.getAbsolutePath()));
+                    files.add(media);
                 }
 
             }
@@ -260,8 +271,8 @@ public class FileManager {
         return true;
     }
 
-    private void writeToFile(String content, String path){
-        File f = new File(path);
+    private void writeToFile(String content){
+        File f = new File("settings.json");
         try (FileWriter writer = new FileWriter(f)){
             if (!checkFile(f)){
                 boolean newFile = f.createNewFile();

@@ -2,10 +2,16 @@ package com.vzplayer;
 
 import java.io.File;
 import java.util.List;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
+import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -20,6 +26,8 @@ public class VZPlayer extends Application{
     VZVideo video;                      // Componente principal VZVideo
     Scene scene;                        // Ventana principal
     EventHandler<KeyEvent> keyboard;    // Gestor de eventos del teclado. Obtenido de MediaControl
+
+    Thread fxThread;
     
     // Desplazamiento de la ventana
     private double xOffset = 0;
@@ -44,8 +52,6 @@ public class VZPlayer extends Application{
 
          */
 
-
-        
         // Carga el video
         video = fm.getVideo();
         // video.initMedia();
@@ -59,7 +65,7 @@ public class VZPlayer extends Application{
         scene.setOnKeyPressed(keyboard);
         video.setStage(stage);
         video.setVisible(true);
-        video.mc.muteUnmute(1);
+        video.getMediaControl().muteUnmute(1);
         
         scene.setFill(Color.TRANSPARENT);
         
@@ -85,11 +91,30 @@ public class VZPlayer extends Application{
         stage.show();
         // video.setFullScreen(true);
         video.sendStatus("Welcome to VZPlayer!");
-        
-        // Si la lista tiene elementos, inicia la reproducción de todos los videos
+
+        fxThread = Thread.currentThread();
+
+        Timer timer = new Timer();
+
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                Set<Thread> threads = Thread.getAllStackTraces().keySet();
+                System.out.printf("\n\n%-30s \t %-15s \t %-15s \t %s \n", "Name", "State", "Priority", "isDaemon");
+                for (Thread t : threads) {
+                    System.out.printf("%-30s \t %-15s \t %-15d \t %s\n", t.getName(), t.getState(), t.getPriority(), t.isDaemon());
+
+                }
+
+            }
+        };
+
+        timer.scheduleAtFixedRate(task,0,5000);
+
         if (fm.getListSize() > 0){
             video.load();
         }
+
         
     }
     
@@ -178,7 +203,7 @@ public class VZPlayer extends Application{
         // Al salir del programa
         stage.setOnCloseRequest(event -> {
             // mc.clear();
-            fm.mc.saveSettings();
+            fm.getControl().saveSettings();
             System.exit(0);
         });
     }

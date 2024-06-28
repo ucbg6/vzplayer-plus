@@ -10,8 +10,13 @@ package com.vzplayer;
  */
 public class App {
 
-    public static void main(String[] args) {
-        VZPlayer.main(args);
+    public static void main(String[] args){
+        try{
+            VZPlayer.main(args);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
     
 }

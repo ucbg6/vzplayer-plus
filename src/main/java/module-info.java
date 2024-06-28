@@ -5,7 +5,8 @@ module com.vzplayer {
     requires javafx.fxml;
     requires javafx.controls;
     requires com.google.gson;
+    requires com.jfoenix;
 
-    opens com.vzplayer to javafx.graphics, javafx.fxml, javafx.controls, json.simple, com.google.gson;
+    opens com.vzplayer to javafx.graphics, javafx.fxml, javafx.controls, json.simple, com.google.gson, com.jfoenix;
     requires json.simple;
 }

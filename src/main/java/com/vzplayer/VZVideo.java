@@ -5,11 +5,15 @@
 package com.vzplayer;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.*;
 
+import com.jfoenix.controls.JFXSlider;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
 import javafx.beans.Observable;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -17,6 +21,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Cursor;
@@ -28,6 +33,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Polygon;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
@@ -37,18 +43,19 @@ public class VZVideo extends StackPane{
     FileManager fm;                     // Gestor de archivos
     MediaControl mc;                    // Control de reproducción
     @FXML ImageView viewer, background, vzsplash, starImage, skipImage, showMenuImg;
-    @FXML StackPane timePane, pauseScreen, viewScreen;
+    @FXML StackPane pauseScreen, viewScreen;
     @FXML Polygon pauseButton;
-    @FXML ProgressBar timeBar;
-    @FXML Label titleLabel, vxlabel, timeLabel, statusLabel, spLabel, skipLabel;
+    // @FXML ProgressBar timeBar;
+    @FXML Label titleLabel, durationLabel, timeLabel, statusLabel, spLabel, skipLabel;
     @FXML BorderPane controlPane, viewerPane, statusPane;
     @FXML HBox upBar, upMenu, listPane;
     @FXML Button showMenu, quit, special, skip, shuffle, repeat, audtrack, captions, settings, volume, 
             showPlaylist, nextButton;
-    @FXML Slider timeSlider;
+    @FXML
+    JFXSlider timeSlider;
     @FXML MenuButton open;
     @FXML MenuItem openFile, openFolder;
-    @FXML VBox upPane;
+    @FXML VBox upPane, timePane;
     @FXML ListView<VZMedia> playListView;
     
     
@@ -75,8 +82,8 @@ public class VZVideo extends StackPane{
     
     */
     
-    public VZVideo(FileManager fm){
-        this.fm = fm;
+    public VZVideo(FileManager filem){
+        fm = filem;
         initialize();
         screenAdjust(); 
         // initMedia();
@@ -88,7 +95,7 @@ public class VZVideo extends StackPane{
         fm.setMediaControl(mc);
     }
     
-    public void rgbBar(){
+    /* public void rgbBar(){
         Timer timer = new Timer();
         TimerTask tk = new TimerTask(){
             @Override
@@ -106,7 +113,7 @@ public class VZVideo extends StackPane{
             } 
         };
         timer.scheduleAtFixedRate(tk, 0, 50);
-    }
+    } */
     
     public EventHandler<KeyEvent> getKeyboard(){
         return keyboard;
@@ -158,7 +165,10 @@ public class VZVideo extends StackPane{
             }
 
         });
-        
+        /*
+        loading.progressProperty().addListener((obv,oval,nval) -> {
+        });
+        */
         setOnMouseMoved(me -> {
             controlPane.setOpacity(1);
             setCursor(Cursor.DEFAULT);
@@ -179,24 +189,45 @@ public class VZVideo extends StackPane{
         
         upPane.setOnMouseEntered(me -> {
             controlActive = true;
-            upPane.setOpacity(1);
+            FadeTransition ftu = new FadeTransition(Duration.millis(500), upPane);
+            ftu.setFromValue(0);
+            ftu.setToValue(1);
+            ftu.setCycleCount(1);
+            // upPane.setOpacity(1);
         });
 
         upPane.setOnMouseExited(me -> {
             controlActive = false;
-            upPane.setOpacity(0);
+            FadeTransition ftu = new FadeTransition(Duration.millis(500), upPane);
+            ftu.setFromValue(1);
+            ftu.setToValue(0);
+            ftu.setCycleCount(1);
         });
 
-        timeBar.setOnMouseEntered(me -> {
+        timeSlider.setOnMouseEntered(me -> {
             controlActive = true;
-            timeBar.setPrefHeight(10);
+            // timeBar.setPrefHeight(10);
             timeSlider.setVisible(true);
+        });
+
+        // timeSlider.setIndicatorPosition(null);
+
+        timeSlider.setValueFactory(new Callback<JFXSlider, StringBinding>() {
+            @Override
+            public StringBinding call(JFXSlider arg0) {
+                return Bindings.createStringBinding(new java.util.concurrent.Callable<String>(){
+                    @Override
+                    public String call() throws Exception {
+                        return mc.timeFormat(mc.getTime());
+                    }
+                }, timeSlider.valueProperty());
+            }
         });
 
         timeSlider.setOnMouseExited(me -> {
             controlActive = false;
-            timeBar.setPrefHeight(7);
-            timeSlider.setVisible(false);
+            // timeBar.setPrefHeight(7);
+            // timeSlider.setVisible(false);
         });
         
         quit.setOnMouseEntered(e -> {
@@ -280,8 +311,32 @@ public class VZVideo extends StackPane{
         playListView.setItems(items);
         
         playListView.setOnMouseClicked(me -> {
-            mc.listIndex.set(playListView.getSelectionModel().getSelectedIndex());
-            mc.play();
+            if (me.getButton() == MouseButton.MIDDLE){
+                playListView.getSelectionModel().select(mc.listIndex.get());
+                playListView.getFocusModel().focus(mc.listIndex.get());
+                playListView.scrollTo(Math.max(mc.listIndex.get() - 5, 0));
+            } else {
+                mc.listIndex.set(playListView.getSelectionModel().getSelectedIndex());
+                mc.play();
+            }
+
+        });
+
+        playListView.setCellFactory(cell -> new ListCell<>() {
+            final Tooltip tooltip = new Tooltip();
+
+            @Override
+            protected void updateItem(VZMedia media, boolean b) {
+                super.updateItem(media, b);
+                if (media == null) {
+                    setText(null);
+                    setTooltip(null);
+                } else {
+                    setText(media.toString());
+                    tooltip.setText(media.tooltip());
+                    setTooltip(tooltip);
+                }
+            }
         });
     }
     
@@ -312,7 +367,7 @@ public class VZVideo extends StackPane{
         
         widthProperty().addListener((observableValue, oldValue, newValue) -> {
             // mc.setPrefWidth((double) newValue);
-            timeBar.setPrefWidth((double)newValue);
+            // timeBar.setPrefWidth((double)newValue);
             titleLabel.setPrefWidth((double)newValue);
             background.setFitWidth((double)newValue);
 
@@ -351,10 +406,6 @@ public class VZVideo extends StackPane{
             myStage.setFullScreen(value);
             myStage.setAlwaysOnTop(value);
             // myStage.setMaximized(value);
-
-            if (value){
-                // setMinimize(false);
-            }
             
 
         } else {
@@ -397,5 +448,9 @@ public class VZVideo extends StackPane{
         if (myStage != null){
             myStage.setTitle(title);
         }
+    }
+
+    public MediaControl getMediaControl() {
+        return mc;
     }
 }
